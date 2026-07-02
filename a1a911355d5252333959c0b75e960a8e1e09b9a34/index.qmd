@@ -1,11 +1,953 @@
 ---
-title: "Bodiversity Index"
+title: "Multidimensional Biodiversity Index (MBI)"
+subtitle: "Steps to get the MBI using Thailand Data"
+description: "Here we calculate three biodiversity components from deployed ecoacoustic devices across various farms in Thailand — Taxonomic Diversity (TD), Functional Diversity (FD), and Structural Diversity (SD) — and combines them into the Multidimensional Biodiversity Index (MBI). Bootstrap simulations are used to quantify uncertainty around each index." 
+lightbox: true
+author: 
+  - name: Diego J. Lizcano
+    orcid: https://orcid.org/0000-0002-9648-0576
+  - name: Jorge Ahumada 
+    orcid: https://orcid.org/0000-0003-0953-9101
+  - name: José Ribeiro Jr
+    orcid: https://orcid.org/0000-0003-3438-6936
+  - name: Thiago Bicudo
+    orcid: https://orcid.org/0000-0001-7868-6696
+  - name: María José Andrade Núñez
+    orcid: https://orcid.org/0000-0002-7066-0966
+        
+
+toc: true
+format: 
+  html:
+    code-fold: true
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+license: CC BY-SA
+date: "2026-05-25"
+execute:
+  freeze: true
+citation: true
+google-scholar: true
+bibliography: grateful-refs.bib
+bibliographystyle: https://www.zotero.org/styles/tapir-conservation
+categories: [model, code, analysis]
+image: "images/emptyforest.png"
 ---
 
-This is a Quarto website.
+## Integrating Biodiversity Indexes: 
 
-To learn more about Quarto websites visit <https://quarto.org/docs/websites>.
+Biodiversity indexes are mathematical measures used by ecologists to quantify the variety of life in an ecosystem. 
+
+Here we develop a new approach to calculate three biodiversity indexes that will be combined as the Multidimensional Biodiversity Index (MBI) at the end. 
+
+#### Load Packages
 
 ```{r}
-1 + 1
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+library(grateful) # Facilitate Citation of R Packages
+library(rmarkdown) # Dynamic Documents for R
+library(readxl) # Read Excel Files
+library(DT) # A Wrapper of the JavaScript Library 'DataTables'
+library(sf) # Simple Features for R
+library(mapview) # Interactive Viewing of Spatial Data in R
+library(maps) # Draw Geographical Maps
+library(tmap) # Thematic Maps
+library(beepr) # Easily Play Notification Sounds on any Platform 
+library(spOccupancy) # Single-Species, Multi-Species, and Integrated Spatial Occupancy Models
+library(posterior) # Tools for Working with Posterior Distributions
+library(fundiversity) # Easy Computation of Functional Diversity Indices
+library(boot) # Bootstrap Functions (Originally by Angelo Canty for S)
+library(downlit) # Syntax Highlighting and Automatic Linking
+
+library(abind) # Combine Multidimensional Arrays 
+library(patchwork) # The Composer of Plots
+library(boot) # Bootstrap Functions (Originally by Angelo Canty for S) 
+library(tidyverse) # Easily Install and Load the 'Tidyverse'
+library(plyr) # Tools for Splitting, Applying and Combining Data
+library(scales) # Scale Functions for Visualization
+library(reshape2) # Flexibly Reshape Data: A Reboot of the Reshape Package
+library(plotly) # Create Interactive Web Graphics via 'plotly.js'
+
+
 ```
+
+
+#### The Thailand Data
+
+Using acoustic sensors a total of 135 species were detected across the 78 sites, including 119 birds, 4 mammals, 11 amphibians, and 1 reptile, with seven bird species currently listed as threatened on the IUCN Red List. Invertivores and omnivores accounted for over 70% of detected bird species, with nearly half associated with semi-open or open habitats, reflecting a dominance of generalist and disturbance-tolerant species The best model was a spatial model including mean canopy cover and habitat type (rubber management systems and forest areas). We ran the spatial model with mammals, birds and amphibians Canopy Cover: Mean canopy cover had a weak and non-significant effect on community occupancy Monoculture was used as the baseline (intercept). Species occupancy was significantly higher in advanced Wanakaset sites compared to monocultures. Forest and early Wanakaset areas showed high internal variability and did not differ significantly from monocultures. Estimated species richness was highest in advanced Wanakaset sites, followed by early-stage Wanakaset and monoculture areas.
+
+## Taxonomic Diversity (TD)
+
+This is not just species richness. Here we calculated the **TD** as the geometric mean of occupancy for each species, representing the abundance of each species at the sampled places.
+
+
+
+$$
+TD_{t}=exp(\frac{1}{n}\sum_{i}^{} ln \frac{d_{i,t}}{d_{i,1}})
+$$
+were:  
+- n = number of species.  
+- di,t = abundance of species i at time t.  
+- di,1 = abundance of species i at time 1.  
+
+Since we have just one temporal measurement the base line to compare is TD at Monoculture.
+
+The occupancy for each species was calculated using the package `spOccupancy` resulting as a table of mean occupancy of posteriors per site.
+
+Load the data:   
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+# Load occupancy
+
+  mean_occupancy <- read_csv("C:/CodigoR/WildMon/FunctionalDiversityV3/data/psi_mean_THAILAND_VF.csv") |> 
+    # rename(site_name = `site name`) |> 
+    # mutate(site_name = str_replace_all(site_name, " ", "_")) |> 
+    mutate(across(where(is.numeric), round, digits = 3))
+
+names(mean_occupancy)[names(mean_occupancy) == "site name"] <- "site_name"
+
+```
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+datatable(mean_occupancy, options = list(pageLength = 10)) 
+```
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+df1 <- mean_occupancy [,-c(2,3)]
+df<-melt(df1)
+colnames(df)<-c("Sampled_site","Species","value")
+
+# Plot heatmap
+p <- ggplot(df, aes(Species, Sampled_site)) + 
+  geom_tile(aes(fill = value),colour = "white") + 
+  scale_fill_gradient(low = "white",high = "#1E5A8C")+
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) + 
+  theme(legend.position = "none",axis.ticks = element_blank(),
+        axis.text.x = element_text(angle = 90, hjust = 1, size=5, face = "italic"),
+        axis.text.y = element_text(size=4))  +
+  labs(title = "Species occupancy per sampled site")
+
+# ggplotly(p) # see interactive
+# View the plot
+p
+```
+
+#### Calculating TD per grouping factor
+
+
+The TD formula is the **geometric mean of occupancy ratios** relative to
+the baseline period $\hat{\psi}_1$. Using model-estimated $\hat{\psi}_t$ 
+
+$$TD_t = \exp\!\left(\frac{1}{n}\sum_{i=1}^{n} \ln\frac{\hat{\psi}_{i,t}}{\hat{\psi}_{i,1}}\right)$$
+
+```{r td_function}
+#' @param psi_t  Numeric vector: estimated occupancy at time t  (length n_sp)
+#' @param psi_1  Numeric vector: estimated occupancy at baseline (length n_sp)
+#' @return Scalar TD value (1 = no community-level change from baseline)
+
+calc_TD <- function(psi_t, psi_1) {
+  psi_t[psi_t <= 0] <- 1e-6
+  psi_1[psi_1 <= 0] <- 1e-6
+  exp(mean(log(psi_t / psi_1)))
+}
+```
+
+To calculate TD per sampled site we use an R idiomatic and cleaner version:   
+TD_t <- exp(mean(log( x ))). And next we summarize by grouping factor.
+ 
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+  mean_occupancy$TD <-  df1[,-c(1)] |> 
+  apply(MARGIN = 1, FUN = function(x) exp(mean(log(x))))  # function for TD
+  
+  group_summary_TD <-  mean_occupancy |> 
+  # melt() |> 
+    group_by(integration_class) %>%
+    summarise(
+      mean_TD = mean(TD, na.rm = TRUE),
+      SD_TD = sd(TD, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+
+TD_t <- exp(mean(log(group_summary_TD$mean_TD / rep(group_summary_TD$mean_TD[4], 4) )))
+
+
+
+```
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+  plot_data_group0 <- group_summary_TD |> 
+    # filter(!is.na(mean_FDiv_obs)) %>%
+    # arrange(mean_FDiv_obs) %>%
+    mutate(group_factor = factor(integration_class, levels = integration_class))
+
+TD_plot <- ggplot(plot_data_group0, aes(x = group_factor, y = mean_TD)) +
+    geom_errorbar(aes(ymin = mean_TD-SD_TD, ymax = mean_TD+SD_TD, color = "Standard deviation"),
+      width = 0.3
+    ) +
+    geom_point(aes(color = "Observed TD"), size = 2) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Observed TD" = "gray25",
+      "Standard deviation" = "#9987FF"
+    )) +
+    labs(
+      title = "Taxonomic Diversity by Group",
+      x = "Group", y = "Taxonomic Diversity"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+
+TD_plot
+
+```
+
+
+```{r}
+datatable(group_summary_TD) 
+```
+
+
+## Functional Diversity (FD)
+
+
+::: {.callout-note icon=false}
+
+#### Functional Diversity (FD):
+
+Should be calculated as **Functional Divergence** using the package `fundiversity` and the function `fd_fdiv`, since input values are continuous occupancy probabilities (ψ, 0–1), not binary presence absence.    
+:::
+
+
+Functional Divergence represents how abundance (occupancy) is spread along a functional trait axis, within the range occupied by the community. For instance, divergence is low when the most abundant species have functional traits that are close to the center of the functional trait range. Conversely, when the most abundant species have extreme functional trait values, then divergence is high. In a multivariate context, functional divergence relates to how abundance is distributed within the volume of functional trait space occupied by species.  
+
+Occupancy was already estimated using the package `spOccupancy`, and is comming from the posteriors located at a three dimensional array **iter_sp_site** where each species was detected in each site, corrected by detectability, using 3000 iterations. The psi values in the array **iter_sp_site** have 3000 iterations per species per site in that order. The psi values of the posteriors are used in the Functional Diversity formula and are provided by array `psi_raw_THAILAND_VF.rds`.   
+
+
+Calculating Functional Diversity requires species-level **trait data**. Traits for each species are provided by the table avonet_traits_birdlife.csv located at the data folder. 
+
+Functional Diversity uses four traits:  
+
+- Wing Length.   
+- Mass.   
+- Habitat Density.   
+- Trophic Level.   
+
+Functional Diversity comes without error or confidence intervals. So we need to implement a bootstrap and jackknife strategy to estimate error per site and per grouping factor using the  posteriors (calculated using the `spOccupancy` package) as the re-sampling basis for psi. The grouping factors per site are located in the column **integration_class** of the table `psi_mean_THAILAND_VF.csv` saved at the data folder.  
+
+Next we load some helper functions to make the calculations. 
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+#' Load and align trait and occupancy data
+load_and_clean_data <- function() {
+  # Use relative paths
+  # Load occupancy, traits, and FHD stats
+  site_comm_raw <- read_csv("C:/CodigoR/WildMon/FunctionalDiversityV3/data/psi_mean_THAILAND_VF.csv", show_col_types = FALSE) %>%
+    rename(site_name = `site name`) %>%
+    mutate(site_name = str_replace_all(site_name, " ", "_"))
+
+  iter_sp_site <- readRDS("C:/CodigoR/WildMon/FunctionalDiversityV3/data/psi_raw_THAILAND_VF.rds")
+  traits_raw <- read_csv("C:/CodigoR/WildMon/FunctionalDiversityV3/data/avonet_traits_birdlife.csv", show_col_types = FALSE)
+
+
+  # Align species
+  common_species <- intersect(colnames(site_comm_raw), traits_raw$Species1)
+
+
+  # Select and format traits
+  traits <- traits_raw %>%
+    filter(Species1 %in% common_species) %>%
+    select(Species1, Wing.Length, Mass, Habitat.Density, Trophic.Level) %>%
+    mutate(across(c(Wing.Length, Mass, Habitat.Density, Trophic.Level), as.numeric)) %>%
+    mutate(across(c(Wing.Length, Mass, Habitat.Density, Trophic.Level), ~ if_else(.x == 0, NA_real_, .x))) %>%
+    mutate(across(c(Wing.Length, Mass, Habitat.Density, Trophic.Level), log)) %>%
+    drop_na() %>%
+    column_to_rownames("Species1")
+
+  common_species <- rownames(traits)
+
+  site_comm <- site_comm_raw %>%
+    select(site_name, integration_class, all_of(common_species))
+
+  # Transpose the array to have: species, sites, and iteration
+  # The RDS is (iteration, species, site)
+  sp_site_iter <- aperm(iter_sp_site, c(2, 3, 1))
+
+  # Ensure dim names match
+  dimnames(sp_site_iter) <- list(
+    species = dimnames(iter_sp_site)[[2]],
+    sites = dimnames(iter_sp_site)[[3]],
+    iteration = NULL
+  )
+
+  return(list(traits = traits, site_comm = site_comm, sp_site_iter = sp_site_iter))
+}
+
+
+#' Estimate site-level uncertainty using posterior iterations and species jackknife
+estimate_site_uncertainty <- function(obs_fdiv_df, traits, site_comm, sp_site_iter, common_species) {
+  site_results <- obs_fdiv_df %>%
+    left_join(site_comm %>% select(site_name, integration_class), by = "site_name") %>%
+    mutate(
+      post_mean = NA_real_,
+      post_low = NA_real_,
+      post_high = NA_real_,
+      jack_low = NA_real_,
+      jack_high = NA_real_
+    )
+
+  sites <- site_results$site_name
+  all_posterior_sites <- dimnames(sp_site_iter)$sites
+
+  for (i in seq_along(sites)) {
+    s_name <- sites[i]
+
+    if (!(s_name %in% all_posterior_sites)) next
+
+    # 1. Posterior Uncertainty
+    # Sample iterations
+    iter_indices <- sample(1:dim(sp_site_iter)[3], N_ITER)
+    # Subset psi for this site across sampled iterations
+    site_psi_samples <- sp_site_iter[common_species, s_name, iter_indices] # species x iterations
+
+    post_fdiv_vals <- apply(site_psi_samples, 2, function(psi_vec) {
+      comm_mat <- matrix(psi_vec, nrow = 1)
+      colnames(comm_mat) <- common_species
+      rownames(comm_mat) <- "site"
+      res <- tryCatch(fd_fdiv(traits, comm_mat), error = function(e) NULL)
+      if (is.null(res)) {
+        return(NA)
+      }
+      return(res$FDiv)
+    })
+
+    site_results$post_mean[i] <- mean(post_fdiv_vals, na.rm = TRUE)
+    site_results$post_low[i] <- quantile(post_fdiv_vals, (1 - CONF_LEVEL) / 2, na.rm = TRUE)
+    site_results$post_high[i] <- quantile(post_fdiv_vals, 1 - (1 - CONF_LEVEL) / 2, na.rm = TRUE)
+
+    # 2. Species Jackknife (using mean psi)
+    site_psi_mean <- site_comm %>%
+      filter(site_name == s_name) %>%
+      select(all_of(common_species)) %>%
+      as.numeric()
+    names(site_psi_mean) <- common_species
+
+    jack_vals <- sapply(seq_along(common_species), function(idx) {
+      sp_subset <- common_species[-idx]
+      traits_subset <- traits[sp_subset, , drop = FALSE]
+      comm_mat <- matrix(site_psi_mean[sp_subset], nrow = 1)
+      colnames(comm_mat) <- sp_subset
+      rownames(comm_mat) <- "site"
+
+      res <- tryCatch(fd_fdiv(traits_subset, comm_mat), error = function(e) NULL)
+      if (is.null(res)) {
+        return(NA)
+      }
+      return(res$FDiv)
+    })
+
+    # Standard Jackknife CI
+    obs_val <- site_results$FDiv_obs[i]
+    n_sp <- length(common_species)
+    jack_mean <- mean(jack_vals, na.rm = TRUE)
+    jack_se <- sqrt(((n_sp - 1) / n_sp) * sum((jack_vals - jack_mean)^2, na.rm = TRUE))
+
+    t_crit <- qt(1 - (1 - CONF_LEVEL) / 2, df = n_sp - 1)
+    site_results$jack_low[i] <- obs_val - t_crit * jack_se
+    site_results$jack_high[i] <- obs_val + t_crit * jack_se
+
+    if (i %% 5 == 0) message(paste("Processed", i, "/", nrow(site_results), "sites"))
+  }
+
+  return(site_results)
+}
+
+
+#' Calculate group-level summaries and confidence intervals via bootstrapping
+calculate_group_summary <- function(site_results) {
+  group_summary <- site_results %>%
+    group_by(integration_class) %>%
+    summarise(
+      mean_FDiv_obs = mean(FDiv_obs, na.rm = TRUE),
+      n_sites = n(),
+      .groups = "drop"
+    )
+
+  group_boot_stats <- site_results %>%
+    filter(!is.na(FDiv_obs)) %>%
+    group_by(integration_class) %>%
+    do({
+      data <- .$FDiv_obs
+      if (length(data) > 1) {
+        b_obj <- boot(data = data, statistic = function(d, i) mean(d[i], na.rm = TRUE), R = 500)
+        b_ci <- tryCatch(boot.ci(b_obj, type = "perc", conf = CONF_LEVEL), error = function(e) NULL)
+        if (!is.null(b_ci)) {
+          data.frame(
+            group_boot_low = b_ci$percent[4],
+            group_boot_high = b_ci$percent[5]
+          )
+        } else {
+          data.frame(group_boot_low = NA_real_, group_boot_high = NA_real_)
+        }
+      } else {
+        data.frame(group_boot_low = NA_real_, group_boot_high = NA_real_)
+      }
+    }) %>%
+    ungroup()
+
+  group_summary <- group_summary %>%
+    left_join(group_boot_stats, by = "integration_class")
+
+  return(group_summary)
+}
+
+
+```
+
+
+Next we load the data and run the functions.
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+# --- Global Configuration ---
+# Number of posterior iterations to sample for site-level uncertainty
+N_ITER <- 100
+# Confidence level for intervals
+CONF_LEVEL <- 0.95
+
+# --- Main Execution ---
+
+
+  # 1. Load Data
+  data_list <- load_and_clean_data()
+  traits <- data_list$traits
+  site_comm <- data_list$site_comm
+  sp_site_iter <- data_list$sp_site_iter
+
+  common_species <- rownames(traits)
+
+  # 2. Observed Functional Divergence (FDiv) using mean psi
+  # message("Calculating observed FDiv...")
+  comm_matrix <- site_comm %>%
+    select(all_of(common_species)) %>%
+    as.matrix()
+  rownames(comm_matrix) <- site_comm$site_name
+
+  obs_fdiv_df <- fd_fdiv(traits, comm_matrix) %>%
+    rename(site_name = site, FDiv_obs = FDiv)
+
+  # 3. Uncertainty Estimation (Posterior Sampling & Jackknife)
+  # message("Estimating uncertainty for each site...")
+  site_results <- estimate_site_uncertainty(obs_fdiv_df, traits, site_comm, sp_site_iter, common_species)
+
+  # 4. Group-level Summary and Bootstrapping
+  # message("Calculating group-level summaries...")
+  group_summary_FD <- calculate_group_summary(site_results)
+
+  # 5. Save Results
+  # if (!dir.exists("out")) dir.create("out")
+  # write_csv(site_results, "out/functional_diversity_results.csv")
+  # write_csv(group_summary, "out/functional_diversity_groups_summary.csv")
+  # message("Results saved to 'out/' directory.")
+
+  # 6. Visualization
+
+#' Generate plots for site and group level Functional Diversity
+# generate_plots <- function(site_results, group_summary) {
+#  message("Generating plots...")
+
+  # 1. Site-level plot
+  plot_data <- site_results %>%
+    filter(!is.na(FDiv_obs)) %>%
+    arrange(FDiv_obs) %>%
+    mutate(site_name = factor(site_name, levels = site_name))
+
+  
+  p1 <- ggplot(plot_data, aes(x = site_name, y = FDiv_obs)) +
+    geom_errorbar(aes(ymin = post_low, ymax = post_high, color = "Bootstrap Posterior 95% CI"),
+      width = 0.3, position = position_nudge(x = -0.15)
+    ) +
+    geom_errorbar(aes(ymin = jack_low, ymax = jack_high, color = "Jackknife Posterior 95% CI"),
+      width = 0.3, position = position_nudge(x = 0.15)
+    ) +
+    geom_point(aes(color = "Observed FD"), size = 1.5) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Observed FD" = "gray25",
+      "Bootstrap Posterior 95% CI" = "#9987FF",
+      "Jackknife Posterior 95% CI" = "#FF878D"
+    )) +
+    labs(
+      title = "Functional Divergence (FDiv) by Site",
+      subtitle = "From posterior samples, calculating uncertainty by Bootstrap and Jackknife",
+      x = "Site Name", y = "Functional Divergence", color = "Method"
+    ) +
+    theme_minimal() +
+    theme(axis.title.y = element_text(size = 8), legend.position = "right")
+
+  print(p1)
+
+
+
+
+
+```
+
+
+Next we do the calculations per grouping factor.  
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+
+
+  # 2. Group-level plot
+  plot_data_group <- group_summary_FD %>%
+    filter(!is.na(mean_FDiv_obs)) %>%
+    arrange(mean_FDiv_obs) %>%
+    mutate(group_factor = factor(integration_class, levels = integration_class))
+
+datatable(plot_data_group)
+
+```
+
+
+and plot FD
+
+```{r}
+
+FD_t <- exp(mean(log(group_summary_FD$mean_FDiv_obs / rep(group_summary_FD$mean_FDiv_obs[4], 4) )))
+
+
+  FD_plot <- ggplot(plot_data_group, aes(x = group_factor, y = mean_FDiv_obs)) +
+    geom_errorbar(aes(ymin = group_boot_low, ymax = group_boot_high, color = "Bootstrap 95% CI"),
+      width = 0.3
+    ) +
+    geom_point(aes(color = "Observed FD"), size = 2) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Observed FD" = "gray25",
+      "Bootstrap 95% CI" = "#9987FF"
+    )) +
+    labs(
+      title = "Mean Functional Divergence (FDiv) by Group",
+      x = "Group", y = "Mean Functional Divergence", color = "Method"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+  
+FD_plot
+```
+
+
+
+
+## Structural Diversity (SD)
+
+Shannon entropy of the foliage height class distribution, normalized by
+the baseline entropy so the index equals 1 at $t = 1$.
+
+$$SD_t = \frac{-\sum_{l=1}^{L} f_{l,t}\ln f_{l,t}}{SD_1}$$
+
+Load Data
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+  fhd_data <- read_csv("C:/CodigoR/WildMon/FunctionalDiversityV3/data/FHD_2022_Thailand_Phase1_buffer200m_Stats.csv", show_col_types = FALSE) %>%
+    rename(site_name = `site name`) %>%
+    mutate(site_name = str_replace_all(site_name, " ", "_"))
+```
+
+Calculate by grouping factor
+
+```{r}
+#' @param foliage_t  Proportions per height layer at time t
+#' @param foliage_1  Proportions at baseline
+#' @return Scalar SD value (1 at baseline)
+
+# function to calculate SD
+calc_SD <- function(foliage_t, foliage_1) {
+  H <- function(p) { p <- p[p > 0]; -sum(p * log(p)) }
+  H(foliage_t) / H(foliage_1)
+}
+```
+
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+
+
+
+  group_summary_SD <-  fhd_data |> 
+  # melt() |> 
+    group_by(integration_class) %>%
+    summarise(
+      mean_SD = mean(FHD_mean, na.rm = TRUE),
+      #entropy_SD = entropy(FHD_mean),
+      SD_SD = sd(FHD_mean, na.rm = TRUE),
+      .groups = "drop"
+    )
+
+
+
+# Calculate SDt
+group_summary_SD$SDt <- c (calc_SD( group_summary_SD$mean_SD[1], group_summary_SD$mean_SD[4]), 
+                           calc_SD( group_summary_SD$mean_SD[2], group_summary_SD$mean_SD[4]),
+                           calc_SD( group_summary_SD$mean_SD[3], group_summary_SD$mean_SD[4]),
+                           calc_SD( group_summary_SD$mean_SD[4], group_summary_SD$mean_SD[4])
+                           )
+
+
+# Calculate SD at original table
+
+for(i in 1:length(fhd_data$FHD_mean)){
+  fhd_data$SD[i] <- calc_SD(fhd_data$FHD_mean[i], group_summary_SD$mean_SD[4])
+}
+
+
+```
+
+
+see the table
+```{r}
+datatable(group_summary_SD) 
+```
+
+
+and plot SD
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+
+
+  # 2. Group-level plot
+  plot_data_group3 <- group_summary_SD |> 
+    # filter(!is.na(mean_FDiv_obs)) %>%
+    # arrange(mean_FDiv_obs) %>%
+    mutate(group_factor = factor(integration_class, levels = integration_class))
+
+  SD_plot <- ggplot(plot_data_group3, aes(x = group_factor, y = SDt)) +
+    geom_errorbar(aes(ymin = SDt-SD_SD, ymax = SDt+SD_SD, color = "Standard deviation"),
+      width = 0.3
+    ) +
+    geom_point(aes(color = "Observed SD"), size = 2) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Observed SD" = "gray25",
+      "Standard deviation" = "#9987FF"
+    )) +
+    labs(
+      title = "Structural diversity by Group",
+      x = "Group", y = "Structural Diversity (entropy)"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+  
+  SD_plot
+```
+
+
+### Multidimensional Biodiversity Index (MBI)
+
+
+ 
+$$
+MBI_{t}=exp(\frac{ln TD_{t} + ln FD_{t} + ln SD_{t} }{3})
+$$
+
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+MBI <- cbind((mean_occupancy[,3]), 
+             (mean_occupancy[,132]), # TD
+             (site_results[,2]),  # FD
+             (fhd_data$SD)) |> # SD 
+  as.data.frame() |> 
+  mutate(across(where(is.numeric), round, digits = 3)) 
+
+colnames(MBI) <- c("integration_class", "TD", "FD", "SD")
+
+MBI$MBI <- exp((log(MBI$TD) + 
+                  log(MBI$FD) + 
+                  log(MBI$SD)) / 3)
+
+
+
+  group_summary_MBI <-  MBI |> 
+    mutate (integration_class=as.character(integration_class)) |> 
+    mutate (TD=as.numeric(TD)) |> 
+    mutate (FD=as.numeric(FD)) |> 
+    mutate (SD=as.numeric(SD)) |> 
+  # melt() |> 
+    group_by(integration_class) %>%
+    summarise(
+      mean_MBI = mean(MBI, na.rm = TRUE),
+      SD_MBI = sd(MBI, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+
+
+
+MBI_t <- exp((log(group_summary_MBI$mean_MBI[1]) + 
+                log(group_summary_MBI$mean_MBI[2]) + 
+                log(group_summary_MBI$mean_MBI[3])) / 3)
+
+
+
+```
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+  # 2. Group-level plot
+  plot_data_group3 <- group_summary_MBI |> 
+    # filter(!is.na(mean_FDiv_obs)) %>%
+    # arrange(mean_FDiv_obs) %>%
+    mutate(group_factor = factor(integration_class, levels = integration_class))
+
+  p4 <- ggplot(plot_data_group3, aes(x = group_factor, y = mean_MBI)) +
+    geom_errorbar(aes(ymin = mean_MBI-SD_MBI, ymax = mean_MBI+SD_MBI, color = "Standard deviation"),
+      width = 0.3
+    ) +
+    geom_point(aes(color = "Observed MBI"), size = 2) +
+    coord_flip() +
+    scale_color_manual(values = c(
+      "Observed MBI" = "gray25",
+      "Standard deviation" = "#9987FF"
+    )) +
+    labs(
+      title = "MBI by Group",
+      x = "Group", y = "MBI"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+  print(p4)
+```
+
+
+```{r}
+datatable(group_summary_MBI) 
+```
+
+
+## Visualization
+
+Lets put together a summary table. 
+ 
+```{r}
+
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+
+
+  TD  <- c((group_summary_TD$mean_TD[4]),
+       mean((group_summary_TD$mean_TD[1]),  
+           (group_summary_TD$mean_TD[2]),  
+           (group_summary_TD$mean_TD[3])))
+  
+  sd_TD  <- c((group_summary_TD$SD_TD[4]),
+       mean((group_summary_TD$SD_TD[1]),  
+           (group_summary_TD$SD_TD[2]),  
+           (group_summary_TD$SD_TD[3])))
+
+  
+  FD <- c((group_summary_FD$mean_FDiv_obs[4]),
+        mean((group_summary_FD$mean_FDiv_obs[1]), 
+         (group_summary_FD$mean_FDiv_obs[2]),
+         (group_summary_FD$mean_FDiv_obs[3])))
+  
+  sd1_FD <- group_summary_FD$group_boot_high -  group_summary_FD$group_boot_low 
+  
+  sd_FD <- c((sd1_FD[4]),
+        mean((sd1_FD[1]), 
+         (sd1_FD[2]),
+         (sd1_FD[3])))
+  
+  SD  <- c((group_summary_SD$SDt[4]),
+        mean((group_summary_SD$SDt[1]), 
+         (group_summary_SD$SDt[2]), 
+         (group_summary_SD$SDt[3])))
+  
+  sd_SD  <- c((group_summary_SD$SD_SD[4]),
+        mean((group_summary_SD$SD_SD[1]), 
+         (group_summary_SD$SD_SD[2]), 
+         (group_summary_SD$SD_SD[3])))
+  
+  MBI <- c((group_summary_MBI$mean_MBI[4]),
+        exp((log(group_summary_MBI$mean_MBI[1]) + 
+         log(group_summary_MBI$mean_MBI[2]) + 
+         log(group_summary_MBI$mean_MBI[3])) / 3))
+  
+  sd_MBI <- c((group_summary_MBI$SD_MBI[4]),
+        mean((group_summary_MBI$SD_MBI[1]), 
+         (group_summary_MBI$SD_MBI[2]), 
+         (group_summary_MBI$SD_MBI[3])))
+  
+  results <- cbind(period = 1:2, TD, sd_TD, FD, sd_FD, SD, sd_SD, MBI, sd_MBI) |> as.data.frame()
+  
+
+datatable(round(results, 4))
+
+
+```
+The first value at period 1 is the baseline. As the baseline we considered the Monoculture. The second value (period 2) is the mean of Advanced stage, Early stage and Forest. 
+
+### Lets make a comparative and summary graph
+
+```{r}
+#| echo: true
+#| code-fold: true
+#| warning: false
+#| message: false
+#| 
+
+
+  df_obs  <- results #%>% select(period, value = all_of(idx_name))
+  # df_boot <- boot_summary %>% filter(index == idx_name)
+TD_g <- ggplot(data = df_obs) +
+    geom_ribbon(aes(x = period, ymin = TD - sd_TD, ymax = TD + sd_TD),
+                fill = "#2196F3", alpha = 0.5) +
+    geom_line(data = df_obs, aes(x = period, y = TD, group = 1),
+              colour = "#2196F3", linewidth = 1.4) +
+    geom_point(data = df_obs, aes(x = period, y = TD, group = 1),
+               colour =  "#2196F3", size = 3.5) +
+    # geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+    # scale_x_continuous(breaks = 1:T, labels = paste0("t", 1:T)) +
+    labs(title = "TD", x = "Survey period (baseline = Monoculture)",
+         y = "Index value") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"))
+  
+FD_g <- ggplot(data = df_obs) +
+    geom_ribbon(aes(x = period, ymin = FD-sd_FD, ymax = FD+sd_FD),
+                fill = "#4CAF50", alpha = 0.5) +
+    geom_line(data = df_obs, aes(x = period, y = FD, group = 1),
+              colour = "#4CAF50", linewidth = 1.4) +
+    geom_point(data = df_obs, aes(x = period, y = FD, group = 1),
+               colour =  "#4CAF50", size = 3.5) +
+    # geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+    # scale_x_continuous(breaks = 1:T, labels = paste0("t", 1:T)) +
+    labs(title = "FD", x = "Survey period (baseline = Monoculture)",
+         y = "Index value ") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"))
+
+
+SD_g <- ggplot(data = df_obs) +
+    geom_ribbon(aes(x = period, ymin = SD-sd_SD, ymax = SD+sd_SD),
+                fill = "#FF9800", alpha = 0.5) +
+    geom_line(data = df_obs, aes(x = period, y = SD, group = 1),
+              colour = "#FF9800", linewidth = 1.4) +
+    geom_point(data = df_obs, aes(x = period, y = SD, group = 1),
+               colour =  "#FF9800", size = 3.5) +
+    # geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+    # scale_x_continuous(breaks = 1:T, labels = paste0("t", 1:T)) +
+    labs(title = "SD", x = "Survey period (baseline = Monoculture)",
+         y = "Index value ") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"))
+
+MBI_g <- ggplot(data = df_obs) +
+    geom_ribbon( aes(x = period, ymin = MBI-sd_MBI, ymax = MBI+sd_MBI),
+                fill = "#9C27B0", alpha = 0.5) +
+    geom_line(data = df_obs, aes(x = period, y = MBI, group = 1),
+              colour = "#9C27B0", linewidth = 1.4) +
+    geom_point(data = df_obs, aes(x = period, y = MBI, group = 1),
+               colour =  "#9C27B0", size = 3.5) +
+    # geom_hline(yintercept = 1, linetype = "dotted", colour = "grey40") +
+    # scale_x_continuous(breaks = 1:T, labels = paste0("t", 1:T)) +
+    labs(title = "MBI", x = "Survey period (baseline = Monoculture)",
+         y = "Index value ") +
+    theme_minimal(base_size = 12) +
+    theme(plot.title = element_text(face = "bold"))
+
+
+plot((TD_g + FD_g) / (SD_g + MBI_g))
+```
+
+Survey period=1 is the baseline (Monoculture). Survey period 2 is the mean of Forest, Early stage, and Advanced stage.
+
+
+## Package Citation
+
+```{r}
+#| code-fold: true
+pkgs <- cite_packages(output = "paragraph", pkgs="Session", out.dir = ".")
+# knitr::kable(pkgs)
+pkgs
+```
+
+## Sesion info
+
+::: {.callout-note collapse="true"}
+```{r}
+print(sessionInfo(), locale = FALSE)
+```
+:::
+
+

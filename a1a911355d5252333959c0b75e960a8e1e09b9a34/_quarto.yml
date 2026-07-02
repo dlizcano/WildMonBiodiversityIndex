@@ -17,11 +17,29 @@ format:
           <script>
           window.addEventListener('load', () => {history.replaceState(null, null, "/login_portal/");});
           </script>
-    theme:
-      - cosmo
-      - brand
-    css: styles.css
     toc: true
+    theme:
+      light: flatly
+      dark: darkly
+    css: styles.css
+    code-link: true
+    code-block-bg: "gray70" 
+    code-fold: true
+    highlight-style: arrow
+    mainfont: Fira Sans
+    monofont: Fira Code, consolas, courier, monospace
+    fig-dpi: 600
+    fig-align: center
+    fig-width: 8
+    fig-asp: 0.7 # 1 / pi
+    fig-format: png
 
-editor: visual
+execute: 
+  freeze: auto
+
+lightbox:
+  match: auto
+  effect: fade
+  desc-position: right
+  loop: TRUE
 
