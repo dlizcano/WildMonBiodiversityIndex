@@ -29,7 +29,7 @@ format:
       dark: darkly
     css: styles.css
     code-link: true
-    code-block-bg: "gray70" 
+    code-block-bg: "gray65" 
     code-fold: true
     highlight-style: arrow
     mainfont: Fira Sans
