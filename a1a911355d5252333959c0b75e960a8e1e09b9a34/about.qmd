@@ -29,6 +29,7 @@ A high-quality biodiversity index should meet several technical criteria:
 
 - Handling Dominance: It should ideally reduce the influence of a single dominant species to prevent it from masking trends on rarer species. 
 
+::: {.callout-note }
 ## What Should a Good Biodiversity Indicator Look Like?
 
 Measure diversity at various levels:
@@ -36,7 +37,7 @@ Measure diversity at various levels:
 - Taxonomic diversity (not just species richness)
 - Functional diversity (the "jobs" that species do)
 - Structural diversity (habitat complexity)
-
+:::
 
 ## Technical Formulations and Dimensions
 

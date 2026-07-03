@@ -3,12 +3,18 @@ project:
   output-dir: "aee093efb3ba01c9910be847b647edbbc08644181"
 
 website:
+  favicon: "images/emptyforest.png"
+  twitter-card: 
+    creator: "@dlizcano"
+  site-url: https://dlizcano.github.io/WildMonBiodiversityIndex
+  open-graph: true
   title: "WildMon Biodiversity Index"
   navbar:
     left:
       - href: index.qmd
         text: Home
-      - about.qmd
+      - href: about.qmd
+        text: About the index
 
 format:
   html:

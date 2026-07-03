@@ -33,6 +33,7 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
+<link href="./images/emptyforest.png" rel="icon" type="image/png">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -109,6 +110,13 @@ window.Quarto = {
 </script>
 
 <link rel="stylesheet" href="styles.css">
+<meta property="og:title" content="About – WildMon Biodiversity Index">
+<meta property="og:description" content="">
+<meta property="og:site_name" content="WildMon Biodiversity Index">
+<meta name="twitter:title" content="About – WildMon Biodiversity Index">
+<meta name="twitter:description" content="">
+<meta name="twitter:creator" content="@dlizcano">
+<meta name="twitter:card" content="summary">
 </head>
 
 <body class="nav-fixed quarto-light"><script id="quarto-html-before-body" type="application/javascript">
@@ -296,7 +304,7 @@ window.Quarto = {
   </li>  
   <li class="nav-item">
     <a class="nav-link active" href="./about.html" aria-current="page"> 
-<span class="menu-text">About</span></a>
+<span class="menu-text">About the index</span></a>
   </li>  
 </ul>
           </div> <!-- /navcollapse -->
@@ -319,7 +327,6 @@ window.Quarto = {
   <ul class="collapse">
   <li><a href="#purpose-and-features-of-a-robust-composite-index" id="toc-purpose-and-features-of-a-robust-composite-index" class="nav-link" data-scroll-target="#purpose-and-features-of-a-robust-composite-index">Purpose and Features of a Robust Composite Index</a></li>
   </ul></li>
-  <li><a href="#what-should-a-good-biodiversity-indicator-look-like" id="toc-what-should-a-good-biodiversity-indicator-look-like" class="nav-link" data-scroll-target="#what-should-a-good-biodiversity-indicator-look-like">What Should a Good Biodiversity Indicator Look Like?</a></li>
   <li><a href="#technical-formulations-and-dimensions" id="toc-technical-formulations-and-dimensions" class="nav-link" data-scroll-target="#technical-formulations-and-dimensions">Technical Formulations and Dimensions</a>
   <ul class="collapse">
   <li><a href="#taxonomic-diversity-geometric-mean-of-occupancy" id="toc-taxonomic-diversity-geometric-mean-of-occupancy" class="nav-link" data-scroll-target="#taxonomic-diversity-geometric-mean-of-occupancy">Taxonomic Diversity (geometric mean of occupancy)</a></li>
@@ -369,16 +376,25 @@ window.Quarto = {
 <li><p>Precision: It should have a measurable and reliable level of precision.</p></li>
 <li><p>Handling Dominance: It should ideally reduce the influence of a single dominant species to prevent it from masking trends on rarer species.</p></li>
 </ul>
-</section>
-</section>
-<section id="what-should-a-good-biodiversity-indicator-look-like" class="level2">
-<h2 class="anchored" data-anchor-id="what-should-a-good-biodiversity-indicator-look-like">What Should a Good Biodiversity Indicator Look Like?</h2>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>What Should a Good Biodiversity Indicator Look Like?
+</div>
+</div>
+<div class="callout-body-container callout-body">
 <p>Measure diversity at various levels:</p>
 <ul>
 <li>Taxonomic diversity (not just species richness)</li>
 <li>Functional diversity (the “jobs” that species do)</li>
 <li>Structural diversity (habitat complexity)</li>
 </ul>
+</div>
+</div>
+</section>
 </section>
 <section id="technical-formulations-and-dimensions" class="level2">
 <h2 class="anchored" data-anchor-id="technical-formulations-and-dimensions">Technical Formulations and Dimensions</h2>
@@ -522,7 +538,7 @@ MBI_{t}=exp(\frac{ln TD_{t} + ln FD_{t} + ln SD_{t} }{3})
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp('/' + window.location.host + '/');
+        var filterRegex = new RegExp("https:\/\/dlizcano\.github\.io\/WildMonBiodiversityIndex");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
